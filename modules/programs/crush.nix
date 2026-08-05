@@ -103,35 +103,9 @@ in
       '';
     };
 
-    skills = mkOption {
-      type = lib.types.either (lib.types.attrsOf (
-        lib.types.oneOf [
-          lib.types.lines
-          lib.types.path
-          lib.types.str
-        ]
-      )) lib.types.path;
-      default = { };
-      description = ''
-        Agent Skills for Crush.
-
-        This option can be either:
-        - An attribute set defining skills
-        - A path to a directory containing skill folders
-
-        If an attribute set is used, the attribute name becomes the skill
-        directory name, and the value is either:
-        - Inline content as a string (creates `crush/skills/<name>/SKILL.md`)
-        - A path to a file (creates `crush/skills/<name>/SKILL.md`)
-        - A path to a directory (creates `crush/skills/<name>/` with all files)
-
-        This also accepts Nix store paths, for example a skill directory from
-        a package.
-
-        If a path is used, it is expected to contain one folder per skill name,
-        each containing a {file}`SKILL.md`. The directory is symlinked to
-        {file}`$XDG_CONFIG_HOME/crush/skills/`.
-      '';
+    skills = lib.hm.paths.mkSkillsOption {
+      name = "Crush";
+      dir = "$XDG_CONFIG_HOME/crush/skills";
       example = literalExpression ''
         {
           git-release = '''
@@ -156,7 +130,7 @@ in
   config = mkIf cfg.enable {
     assertions = [
       {
-        assertion = !lib.hm.strings.isPathLike cfg.skills || lib.pathIsDirectory cfg.skills;
+        assertion = !lib.hm.strings.isPathLike cfg.skills || lib.hm.paths.isDirectory cfg.skills;
         message = "`programs.crush.skills` must be a directory when set to a path";
       }
     ];
@@ -178,17 +152,6 @@ in
         recursive = true;
       };
     }
-    // lib.mapAttrs' (
-      name: content:
-      if lib.hm.strings.isPathLike content && lib.pathIsDirectory content then
-        lib.nameValuePair "crush/skills/${name}" {
-          source = content;
-          recursive = true;
-        }
-      else
-        lib.nameValuePair "crush/skills/${name}/SKILL.md" (
-          if lib.hm.strings.isPathLike content then { source = content; } else { text = content; }
-        )
-    ) skills;
+    // lib.hm.paths.mkSkillEntries { dir = "crush/skills"; } skills;
   };
 }

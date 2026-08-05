@@ -391,29 +391,11 @@ in
       '';
     };
 
-    skills = mkOption {
-      type = with lib.types; either (attrsOf (either lines path)) path;
-      default = { };
-      description = ''
-        Custom skills for Claude Code.
-
-        This option can be either:
-        - An attribute set defining skills
-        - A path to a directory containing skill folders
-
-        If an attribute set is used, the attribute name becomes the
-        skill directory name, and the value is either:
-        - Inline content as a string (creates {file}`skills/<name>/SKILL.md`)
-        - A path to a file (creates {file}`skills/<name>/SKILL.md`)
-        - A path to a directory (creates {file}`skills/<name>/` with all files)
-
-        This also accepts Nix store paths, for example a skill directory
-        from a package.
-
-        If a path is used, it is expected to contain one folder per
-        skill name, each containing a {file}`SKILL.md`. The directory is
-        symlinked into the {file}`skills/` subdirectory of
-        {option}`programs.claude-code.configDir`.
+    skills = lib.hm.paths.mkSkillsOption {
+      name = "Claude Code";
+      dir = "skills";
+      extraDescription = ''
+        The directory sits inside {option}`programs.claude-code.configDir`.
       '';
       example = literalExpression ''
         {

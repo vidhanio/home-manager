@@ -127,7 +127,7 @@ in
         mergedSettingsWithoutMcp
         // lib.optionalAttrs (mergedMcpServers != { }) { mcp_servers = mergedMcpServers; };
       hooksArePath = lib.hm.strings.isPathLike cfg.hooks;
-      hooksAreDir = hooksArePath && lib.pathIsDirectory cfg.hooks;
+      hooksAreDir = lib.hm.paths.isDirectory cfg.hooks;
       hooksJsonSource = if hooksAreDir then cfg.hooks + "/hooks.json" else cfg.hooks;
     in
     mkIf cfg.enable {
@@ -147,26 +147,25 @@ in
         {
           assertion = lib.all (
             plugin:
-            !(lib.hm.strings.isPathLike plugin && !lib.isDerivation plugin) || lib.pathIsDirectory plugin
+            lib.isDerivation plugin || !lib.hm.strings.isPathLike plugin || lib.hm.paths.isDirectory plugin
           ) cfg.plugins;
           message = "`programs.codex.plugins` entries must be directories";
         }
         {
           assertion = lib.all (
             marketplace:
-            !(lib.hm.strings.isPathLike marketplace && !lib.isDerivation marketplace)
-            || lib.pathIsDirectory marketplace
+            lib.isDerivation marketplace
+            || !lib.hm.strings.isPathLike marketplace
+            || lib.hm.paths.isDirectory marketplace
           ) (lib.attrValues cfg.marketplaces);
           message = "`programs.codex.marketplaces` entries must be directories";
         }
         {
-          assertion = !lib.hm.strings.isPathLike cfg.skills || lib.pathIsDirectory cfg.skills;
+          assertion = !lib.hm.strings.isPathLike cfg.skills || lib.hm.paths.isDirectory cfg.skills;
           message = "`programs.codex.skills` must be a directory when set to a path";
         }
         {
-          assertion = lib.all (content: !(lib.hm.strings.isPathLike content && lib.pathIsDirectory content)) (
-            lib.attrValues cfg.rules
-          );
+          assertion = lib.all (content: !lib.hm.paths.isDirectory content) (lib.attrValues cfg.rules);
           message = "`programs.codex.rules` attribute values must be files when set to paths";
         }
         {

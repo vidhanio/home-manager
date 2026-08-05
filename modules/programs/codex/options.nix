@@ -220,28 +220,11 @@ in
       '';
     };
 
-    skills = lib.mkOption {
-      type = lib.types.either (lib.types.attrsOf (lib.types.either lib.types.lines lib.types.path)) lib.types.path;
-      default = { };
-      description = ''
-        Custom skills for Codex.
-
-        This option can be either:
-        - An attribute set defining skills
-        - A path to a directory containing skill folders
-
-        If an attribute set is used, the attribute name becomes the
-        skill directory name, and the value is either:
-        - Inline content as a string (creates a generated skill directory at {file}`<skills-dir>/<name>/`)
-        - A path to a file (creates a generated skill directory at {file}`<skills-dir>/<name>/`)
-        - A path to a directory (symlinks {file}`<skills-dir>/<name>/` to that directory)
-
-        If a path is used, it is expected to contain one folder per
-        skill name, each containing a {file}`SKILL.md`. Each top-level
-        skill entry is symlinked into {file}`<skills-dir>/`, leaving
-        {file}`<skills-dir>/` itself as a normal directory so unmanaged
-        skills can coexist.
-
+    skills = lib.hm.paths.mkSkillsOption {
+      name = "Codex";
+      dir = "<skills-dir>";
+      skillMustBeDirectory = true;
+      extraDescription = ''
         Home Manager manages skills under {file}`CODEX_HOME/skills`
         (typically {file}`~/.codex/skills`, or
         {file}`~/.config/codex/skills` when

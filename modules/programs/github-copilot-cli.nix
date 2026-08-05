@@ -270,15 +270,7 @@ in
       '';
     };
 
-    agents = mkOption {
-      type = lib.types.either (lib.types.attrsOf (
-        lib.types.oneOf [
-          lib.types.lines
-          lib.types.path
-          lib.types.str
-        ]
-      )) lib.types.path;
-      default = { };
+    agents = lib.hm.paths.mkContentSetOption {
       example = literalExpression ''
         {
           code-reviewer = '''
@@ -314,15 +306,9 @@ in
       '';
     };
 
-    skills = mkOption {
-      type = lib.types.either (lib.types.attrsOf (
-        lib.types.oneOf [
-          lib.types.lines
-          lib.types.path
-          lib.types.str
-        ]
-      )) lib.types.path;
-      default = { };
+    skills = lib.hm.paths.mkSkillsOption {
+      name = "GitHub Copilot CLI";
+      dir = "\${configDir}/skills";
       example = literalExpression ''
         {
           data-analysis = ./skills/data-analysis;
@@ -336,40 +322,18 @@ in
           ''';
         }
       '';
-      description = ''
-        Custom skills for GitHub Copilot CLI.
-
-        This option can be either:
-        - An attribute set defining skills
-        - A path to a directory containing skill folders
-
-        If an attribute set is used, the attribute name becomes the skill
-        directory name, and the value is either:
-        - Inline content as a string (creates
-          {file}`''${configDir}/skills/<name>/SKILL.md`)
-        - A path to a file (creates
-          {file}`''${configDir}/skills/<name>/SKILL.md`)
-        - A path to a directory (symlinks
-          {file}`''${configDir}/skills/<name>/` to that directory)
-
-        If a path is used, it is expected to contain one folder per skill name,
-        each containing a {file}`SKILL.md`. The directory is symlinked to
-        {file}`''${configDir}/skills/`.
-
-        See <https://docs.github.com/en/copilot/reference/copilot-cli-reference/cli-command-reference#skills-reference>
-        for the documentation.
-      '';
+      docsUrl = "https://docs.github.com/en/copilot/reference/copilot-cli-reference/cli-command-reference#skills-reference";
     };
   };
 
   config = mkIf cfg.enable {
     assertions = [
       {
-        assertion = !lib.hm.strings.isPathLike cfg.agents || lib.pathIsDirectory cfg.agents;
+        assertion = !lib.hm.strings.isPathLike cfg.agents || lib.hm.paths.isDirectory cfg.agents;
         message = "`programs.github-copilot-cli.agents` must be a directory when set to a path";
       }
       {
-        assertion = !lib.hm.strings.isPathLike cfg.skills || lib.pathIsDirectory cfg.skills;
+        assertion = !lib.hm.strings.isPathLike cfg.skills || lib.hm.paths.isDirectory cfg.skills;
         message = "`programs.github-copilot-cli.skills` must be a directory when set to a path";
       }
     ];
@@ -426,18 +390,7 @@ in
       ) cfg.agents
     )
     // lib.optionalAttrs (builtins.isAttrs cfg.skills) (
-      lib.mapAttrs' (
-        name: content:
-        if lib.hm.strings.isPathLike content && lib.pathIsDirectory content then
-          lib.nameValuePair "${cfg.configDir}/skills/${name}" {
-            source = content;
-            recursive = true;
-          }
-        else
-          lib.nameValuePair "${cfg.configDir}/skills/${name}/SKILL.md" (
-            if lib.hm.strings.isPathLike content then { source = content; } else { text = content; }
-          )
-      ) cfg.skills
+      lib.hm.paths.mkSkillEntries { dir = "${cfg.configDir}/skills"; } cfg.skills
     );
 
     home.sessionVariables = mkIf (cfg.configDir != upstreamConfigDir) {

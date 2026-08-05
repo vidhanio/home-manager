@@ -336,9 +336,9 @@ in
       '';
     };
 
-    skills = lib.mkOption {
-      type = lib.types.either (lib.types.attrsOf (lib.types.either lib.types.lines lib.types.path)) lib.types.path;
-      default = { };
+    skills = lib.hm.paths.mkSkillsOption {
+      name = "Antigravity CLI";
+      dir = "~/.gemini/antigravity-cli/skills";
       example = lib.literalExpression ''
         {
           xlsx = ./skills/xlsx/SKILL.md;
@@ -363,23 +363,6 @@ in
             ```
           ''';
         }
-      '';
-      description = ''
-        Custom skills for Antigravity CLI.
-
-        This option can be either:
-        - An attribute set defining skills
-        - A path to a directory containing skill folders
-
-        If an attribute set is used, the attribute name becomes the
-        skill directory name, and the value is either:
-        - Inline content as a string (creates `~/.gemini/antigravity-cli/skills/<name>/SKILL.md`)
-        - A path to a file (creates `~/.gemini/antigravity-cli/skills/<name>/SKILL.md`)
-        - A path to a directory (symlinks `~/.gemini/antigravity-cli/skills/<name>/` to that directory)
-
-        If a path is used, it is expected to contain one folder per
-        skill name, each containing a {file}`SKILL.md`. The directory is
-        symlinked to {file}`~/.gemini/antigravity-cli/skills/`.
       '';
     };
   };
@@ -468,18 +451,7 @@ in
                   };
                 }
               else
-                lib.mapAttrs' (
-                  n: v:
-                  if lib.hm.strings.isPathLike v && lib.pathIsDirectory v then
-                    lib.nameValuePair "${geminiSkillsDir}/${n}" {
-                      source = v;
-                      recursive = true;
-                    }
-                  else
-                    lib.nameValuePair "${geminiSkillsDir}/${n}/SKILL.md" (
-                      if lib.hm.strings.isPathLike v then { source = v; } else { text = v; }
-                    )
-                ) cfg.skills
+                lib.hm.paths.mkSkillEntries { dir = geminiSkillsDir; } cfg.skills
             );
         })
         (lib.mkIf (!useGeminiConfig) {
@@ -547,24 +519,13 @@ in
                   };
                 }
               else
-                lib.mapAttrs' (
-                  n: v:
-                  if lib.hm.strings.isPathLike v && lib.pathIsDirectory v then
-                    lib.nameValuePair "${antigravitySkillsDir}/${n}" {
-                      source = v;
-                      recursive = true;
-                    }
-                  else
-                    lib.nameValuePair "${antigravitySkillsDir}/${n}/SKILL.md" (
-                      if lib.hm.strings.isPathLike v then { source = v; } else { text = v; }
-                    )
-                ) cfg.skills
+                lib.hm.paths.mkSkillEntries { dir = antigravitySkillsDir; } cfg.skills
             );
         })
         {
           assertions = [
             {
-              assertion = !lib.hm.strings.isPathLike cfg.skills || lib.pathIsDirectory cfg.skills;
+              assertion = !lib.hm.strings.isPathLike cfg.skills || lib.hm.paths.isDirectory cfg.skills;
               message = "`programs.antigravity-cli.skills` must be a directory when set to a path";
             }
           ];

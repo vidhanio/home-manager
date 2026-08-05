@@ -52,7 +52,7 @@ in
     skills:
     if builtins.isAttrs skills then
       skills
-    else if lib.hm.strings.isPathLike skills && lib.pathIsDirectory skills then
+    else if lib.hm.paths.isDirectory skills then
       lib.mapAttrs (name: _type: skills + "/${name}") (builtins.readDir skills)
     else
       { };
@@ -113,20 +113,15 @@ in
 
       mkRuleEntry =
         name: content:
-        lib.nameValuePair "${configDir}/rules/${name}.rules" (
-          if lib.hm.strings.isPathLike content then { source = content; } else { text = content; }
-        );
+        lib.nameValuePair "${configDir}/rules/${name}.rules" (lib.hm.paths.mkSourceEntry content);
 
       mkSkillEntry =
         name: content:
-        if lib.hm.strings.isPathLike content && lib.pathIsDirectory content then
-          lib.nameValuePair "${skillsDir}/${name}" {
-            source = content;
-          }
-        else
-          lib.nameValuePair "${skillsDir}/${name}" {
-            source = mkSkillDir content;
-          };
+        lib.nameValuePair "${skillsDir}/${name}" {
+          # Codex loads a skill only from its own directory, so content that
+          # is not already a directory is wrapped in a generated one.
+          source = if lib.hm.paths.isDirectory content then content else mkSkillDir content;
+        };
 
       mkTextOrPathEntry =
         path: content:

@@ -6,8 +6,7 @@ in
   mkHelpers =
     { configDir }:
     let
-      mkSourceEntry =
-        content: if lib.hm.strings.isPathLike content then { source = content; } else { text = content; };
+      inherit (lib.hm.paths) mkSourceEntry;
 
       mkMarketplaceEntry = _name: content: {
         source = {
@@ -91,16 +90,6 @@ in
           };
         };
 
-      mkSkillEntry =
-        name: content:
-        if lib.hm.strings.isPathLike content && lib.pathIsDirectory content then
-          lib.nameValuePair "${configDir}/skills/${name}" {
-            source = content;
-            recursive = true;
-          }
-        else
-          lib.nameValuePair "${configDir}/skills/${name}/SKILL.md" (
-            if lib.hm.strings.isPathLike content then { source = content; } else { text = content; }
-          );
+      mkSkillEntries = lib.hm.paths.mkSkillEntries { dir = "${configDir}/skills"; };
     };
 }

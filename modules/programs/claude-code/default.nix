@@ -89,7 +89,7 @@ in
         mkMarketplaceEntry
         mkPluginEntry
         mkRecursiveDirAttrs
-        mkSkillEntry
+        mkSkillEntries
         ;
 
       mergedMcpServers =
@@ -166,7 +166,7 @@ in
 
       skillsAreAttrs = builtins.isAttrs cfg.skills;
       skillsArePath = lib.hm.strings.isPathLike cfg.skills;
-      skillsAreDirectory = skillsArePath && lib.pathIsDirectory cfg.skills;
+      skillsAreDirectory = lib.hm.paths.isDirectory cfg.skills;
       skillNames = lib.attrNames (
         if skillsAreAttrs then
           cfg.skills
@@ -314,7 +314,7 @@ in
           })
           pluginFileEntries
           (mkHookEntries cfg.hooks)
-          (lib.optionalAttrs skillsAreAttrs (lib.mapAttrs' mkSkillEntry cfg.skills))
+          (lib.optionalAttrs skillsAreAttrs (mkSkillEntries cfg.skills))
           (mkMarkdownEntries "output-styles" cfg.outputStyles)
         ];
       };

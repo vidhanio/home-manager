@@ -315,37 +315,10 @@ in
       '';
     };
 
-    skills = lib.mkOption {
-      type = lib.types.either (lib.types.attrsOf (
-        lib.types.oneOf [
-          lib.types.lines
-          lib.types.path
-          lib.types.str
-        ]
-      )) lib.types.path;
-      default = { };
-      description = ''
-        Custom skills for OpenCode.
-
-        This option can be either:
-        - An attribute set defining skills
-        - A path to a directory containing skill folders
-
-        If an attribute set is used, the attribute name becomes the
-        skill directory name, and the value is either:
-        - Inline content as a string (creates `opencode/skills/<name>/SKILL.md`)
-        - A path to a file (creates `opencode/skills/<name>/SKILL.md`)
-        - A path to a directory (creates `opencode/skills/<name>/` with all files)
-
-        This also accepts Nix store paths, for example a skill directory
-        from a package.
-
-        If a path is used, it is expected to contain one folder per
-        skill name, each containing a {file}`SKILL.md`. The directory is
-        symlinked to {file}`$XDG_CONFIG_HOME/opencode/skills/`.
-
-        See <https://opencode.ai/docs/skills/> for the documentation.
-      '';
+    skills = lib.hm.paths.mkSkillsOption {
+      name = "OpenCode";
+      dir = "$XDG_CONFIG_HOME/opencode/skills";
+      docsUrl = "https://opencode.ai/docs/skills/";
       example = lib.literalExpression ''
         {
           git-release = '''
@@ -452,7 +425,7 @@ in
         message = "`programs.opencode.tools` must be a directory when set to a path";
       }
       {
-        assertion = !lib.hm.strings.isPathLike cfg.skills || lib.pathIsDirectory cfg.skills;
+        assertion = !lib.hm.strings.isPathLike cfg.skills || lib.hm.paths.isDirectory cfg.skills;
         message = "`programs.opencode.skills` must be a directory when set to a path";
       }
       {
@@ -573,18 +546,9 @@ in
         )
       ) cfg.tools
     )
-    // lib.mapAttrs' (
-      name: content:
-      if lib.hm.strings.isPathLike content && lib.pathIsDirectory content then
-        lib.nameValuePair "opencode/skills/${name}" {
-          source = content;
-          recursive = true;
-        }
-      else
-        lib.nameValuePair "opencode/skills/${name}/SKILL.md" (
-          if lib.hm.strings.isPathLike content then { source = content; } else { text = content; }
-        )
-    ) (if builtins.isAttrs cfg.skills then cfg.skills else { })
+    // lib.hm.paths.mkSkillEntries { dir = "opencode/skills"; } (
+      if builtins.isAttrs cfg.skills then cfg.skills else { }
+    )
     // lib.optionalAttrs (builtins.isAttrs cfg.themes) (
       lib.mapAttrs' (
         name: content:
