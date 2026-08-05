@@ -20,5 +20,6 @@
   codex-skills-dir = ./skills-dir.nix;
   codex-skills-store-path = ./skills-store-path.nix;
   codex-skills-store-path-dir = ./skills-store-path-dir.nix;
+  codex-skills-typed-path = ./skills-typed-path.nix;
   codex-skills-path-not-directory = ./skills-path-not-directory.nix;
 }

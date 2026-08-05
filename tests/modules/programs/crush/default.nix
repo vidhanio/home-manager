@@ -3,4 +3,5 @@
   crush-mcp-integration = ./mcp-integration.nix;
   crush-skills = ./skills.nix;
   crush-skills-path = ./skills-path.nix;
+  crush-skills-typed-path = ./skills-typed-path.nix;
 }

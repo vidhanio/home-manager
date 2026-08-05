@@ -4,6 +4,7 @@
   antigravity-cli-skills = ./skills.nix;
   antigravity-cli-skills-dir = ./skills-dir.nix;
   antigravity-cli-skills-store-path-dir = ./skills-store-path-dir.nix;
+  antigravity-cli-skills-typed-path = ./skills-typed-path.nix;
   antigravity-cli-skills-path-not-directory = ./skills-path-not-directory.nix;
   antigravity-cli-mcp-servers = ./mcp.nix;
   antigravity-cli-policies-removed = ./policies-removed.nix;

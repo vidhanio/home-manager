@@ -3,11 +3,18 @@ let
   # TODO: Remove this workaround once Codex supports symlinked SKILL.md
   # files again. Upstream only supports symlinking the containing skill
   # directory today: https://github.com/openai/codex/issues/10470
+  # A file is copied at build time rather than read at evaluation time, so
+  # that content coming from a derivation does not have to be built to be
+  # read (import-from-derivation).
   mkSkillDir =
     content:
-    pkgs.writeTextDir "SKILL.md" (
-      if lib.hm.strings.isPathLike content then builtins.readFile content else content
-    );
+    if lib.hm.paths.isPath content then
+      pkgs.runCommand "codex-skill" { } ''
+        mkdir -p "$out"
+        cp "${lib.hm.paths.getPath content}" "$out/SKILL.md"
+      ''
+    else
+      pkgs.writeTextDir "SKILL.md" content;
 
   mkPluginName =
     plugin:
@@ -120,7 +127,8 @@ in
         lib.nameValuePair "${skillsDir}/${name}" {
           # Codex loads a skill only from its own directory, so content that
           # is not already a directory is wrapped in a generated one.
-          source = if lib.hm.paths.isDirectory content then content else mkSkillDir content;
+          source =
+            if lib.hm.paths.isDirectory content then lib.hm.paths.getPath content else mkSkillDir content;
         };
 
       mkTextOrPathEntry =

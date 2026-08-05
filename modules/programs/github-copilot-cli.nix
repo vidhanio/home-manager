@@ -384,9 +384,7 @@ in
     // lib.optionalAttrs (builtins.isAttrs cfg.agents) (
       lib.mapAttrs' (
         name: content:
-        lib.nameValuePair "${cfg.configDir}/agents/${name}.agent.md" (
-          if lib.hm.strings.isPathLike content then { source = content; } else { text = content; }
-        )
+        lib.nameValuePair "${cfg.configDir}/agents/${name}.agent.md" (lib.hm.paths.mkSourceEntry content)
       ) cfg.agents
     )
     // lib.optionalAttrs (builtins.isAttrs cfg.skills) (

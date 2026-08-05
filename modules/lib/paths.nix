@@ -4,22 +4,87 @@ let
   inherit (lib.hm.strings) isPathLike;
 
   /*
+    A path that states whether it points at a file or at a directory.
+
+    Type: typedPathType :: OptionType
+  */
+  typedPathType = lib.types.submodule {
+    options = {
+      path = lib.mkOption {
+        type = lib.types.path;
+        description = "Path to the file or directory holding the content.";
+      };
+
+      type = lib.mkOption {
+        type = lib.types.nullOr (
+          lib.types.enum [
+            "file"
+            "directory"
+          ]
+        );
+        default = null;
+        example = "directory";
+        description = ''
+          Whether {option}`path` points at a file or at a directory.
+
+          When this is `null`, Home Manager inspects {option}`path` to find
+          out, which realizes it. A path that comes from a derivation is then
+          built during evaluation (import-from-derivation). State the type to
+          avoid that.
+        '';
+      };
+    };
+  };
+
+  /*
+    Whether a value states a path together with its type, rather than being a
+    bare path. Derivations are attribute sets as well, so they are excluded.
+
+    Type: isTypedPath :: Value -> Bool
+  */
+  isTypedPath = value: lib.isAttrs value && value ? path && !lib.isDerivation value;
+
+  /*
+    Whether `content` refers to a path at all, rather than to inline content.
+
+    Type: isPath :: Value -> Bool
+  */
+  isPath = content: isTypedPath content || isPathLike content;
+
+  /*
+    The path `content` refers to, whether it is stated directly or through a
+    typed path.
+
+    Type: getPath :: Value -> (Path | String | Derivation)
+  */
+  getPath = content: if isTypedPath content then content.path else content;
+
+  /*
     Whether `content` refers to a directory rather than a file or inline
     content.
 
-    Answering this realizes the path, so content backed by a derivation that
-    has not been built yet is built during evaluation
+    A typed path that states its type is answered from that alone. Any other
+    path has to be realized to be inspected, so content backed by a derivation
+    that has not been built yet is built during evaluation
     (import-from-derivation).
 
-    Type: isDirectory :: (Path | String | Derivation) -> Bool
+    Type: isDirectory :: Value -> Bool
   */
-  isDirectory = content: isPathLike content && lib.pathIsDirectory content;
+  isDirectory =
+    content:
+    if isTypedPath content && content.type or null != null then
+      content.type == "directory"
+    else
+      let
+        path = getPath content;
+      in
+      isPathLike path && lib.pathIsDirectory path;
 
   /*
     A `home.file`-style entry for content that is either a path to a file or
     inline text.
 
-    Type: mkSourceEntry :: (Path | String | Derivation) -> AttrSet
+    Type: mkSourceEntry :: Value -> AttrSet
 
     Example:
       mkSourceEntry ./skill.md
@@ -28,7 +93,8 @@ let
       mkSourceEntry "inline content"
       => { text = "inline content"; }
   */
-  mkSourceEntry = content: if isPathLike content then { source = content; } else { text = content; };
+  mkSourceEntry =
+    content: if isPath content then { source = getPath content; } else { text = content; };
 
   /*
     The type of a single piece of content that is either inline text or a path
@@ -42,6 +108,18 @@ let
   ];
 
   /*
+    The type of a single skill. Only skills tell a file apart from a
+    directory, so only they accept a typed path.
+
+    Type: skillContentType :: OptionType
+  */
+  skillContentType = lib.types.oneOf [
+    lib.types.lines
+    lib.types.path
+    typedPathType
+  ];
+
+  /*
     The type of a named set of content entries, or of a single directory
     holding one entry per name.
 
@@ -50,22 +128,38 @@ let
   contentSetType = lib.types.either (lib.types.attrsOf contentType) lib.types.path;
 
   /*
+    The `contentSetType` of a set of skills.
+
+    Type: skillsSetType :: OptionType
+  */
+  skillsSetType = lib.types.either (lib.types.attrsOf skillContentType) lib.types.path;
+
+  /*
     An option holding a named set of content entries, such as skills or
     agents. Every program declaring one uses the same type and default, so
     only the documentation differs between them.
 
-    Type: mkContentSetOption :: { description, example } -> Option
+    Type: mkContentSetOption :: { description, example, type? } -> Option
   */
   mkContentSetOption =
-    { description, example }:
+    {
+      description,
+      example,
+      type ? contentSetType,
+    }:
     lib.mkOption {
-      type = contentSetType;
       default = { };
-      inherit description example;
+      inherit type description example;
     };
 in
 {
   inherit
+    typedPathType
+    isTypedPath
+    isPath
+    skillContentType
+    skillsSetType
+    getPath
     isDirectory
     mkSourceEntry
     contentType
@@ -118,6 +212,7 @@ in
     in
     mkContentSetOption {
       inherit example;
+      type = skillsSetType;
       description = ''
         Custom skills for ${name}.
 
@@ -130,6 +225,12 @@ in
         - Inline content as a string (creates ${entryTarget})
         - A path to a file (creates ${entryTarget})
         - A path to a directory (${directoryTarget})
+
+        A path can state which of the two it is, as
+        `{ path = ./skills/grill-me/SKILL.md; type = "file"; }` or
+        `{ path = ./skills/grill-me; type = "directory"; }`. Home Manager
+        otherwise has to inspect it, which builds a path that comes from a
+        derivation during evaluation (import-from-derivation).
 
         This also accepts Nix store paths, for example a skill directory from
         a package.
@@ -167,7 +268,7 @@ in
       name: content:
       if isDirectory content then
         lib.nameValuePair "${dir}/${name}" {
-          source = content;
+          source = getPath content;
           recursive = true;
         }
       else
